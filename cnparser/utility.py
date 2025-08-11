@@ -3,9 +3,9 @@ It is utility functions class.
 """
 import json
 import os
+from importlib import resources
 
 import cnparser
-import pkg_resources
 
 
 def load_config(data_type:str) -> str:
@@ -22,9 +22,24 @@ def load_config(data_type:str) -> str:
         raise SystemExit(f'Config file not found: {exc}') from exc
 
 def load_api() -> str:
-    resource_path = 'config/api/ja.json'  # パッケージ内のリソースへのパス
-    if pkg_resources.resource_exists(__name__, resource_path):
-        file_path = pkg_resources.resource_filename(__name__, resource_path)
-        return 'file://' + file_path.replace('.json', '')
-    else:
-        raise FileNotFoundError(f"No such file or directory: '{resource_path}'")
+    """Return a file:// URL for the API resource if present.
+
+    Note: This uses importlib.resources and does not require setuptools.
+    If the resource does not exist, a FileNotFoundError is raised.
+    """
+    package = 'cnparser'
+    rel_path = 'config/api/ja.json'
+    # Prefer modern API if available (Python 3.9+)
+    try:
+        with resources.as_file(resources.files(package).joinpath(rel_path)) as p:
+            if p.exists():
+                return 'file://' + str(p).replace('.json', '')
+    except (AttributeError, FileNotFoundError):
+        # Fallback for older Python versions
+        try:
+            with resources.path(package, rel_path) as p:
+                if p.exists():
+                    return 'file://' + str(p).replace('.json', '')
+        except FileNotFoundError:
+            pass
+    raise FileNotFoundError(f"No such file or directory: '{rel_path}'")
