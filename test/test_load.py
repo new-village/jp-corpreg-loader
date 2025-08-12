@@ -3,12 +3,12 @@
 import unittest
 import json
 import pandas as pd
-from cnparser.load import load, read_csv
+from src.load import load, read_csv
 
 class TestLoadFunctions(unittest.TestCase):
     def setUp(self):
         """Load expected columns from configuration file before each test."""
-        with open('cnparser/config/header.json', 'r') as file:
+        with open('src/config/header.json', 'r') as file:
             self.expected_columns = json.load(file)
 
     def test_load(self):
