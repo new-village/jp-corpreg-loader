@@ -1,5 +1,5 @@
 # jpcorpreg  
-[![Test](https://github.com/new-village/jpcorpreg/actions/workflows/test.yaml/badge.svg)](https://github.com/new-village/jpcorpreg/actions/workflows/test.yaml)
+[![Test](https://github.com/new-village/jp-corpreg-loader/actions/workflows/test.yaml/badge.svg)](https://github.com/new-village/jp-corpreg-loader/actions/workflows/test.yaml)
 ![PyPI - Version](https://img.shields.io/pypi/v/jpcorpreg)
   
 **jpcorpreg** is a Python library that downloads corporate registry which is published in the [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/en/) as a data frame.
