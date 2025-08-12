@@ -9,7 +9,7 @@ import pandas as pd
 from io import StringIO
 from bs4 import BeautifulSoup
 
-from src.utility import load_config
+from jpcorpreg.utility import load_config
 
 # Dictionary mapping Japanese prefecture names to English
 PREF_MAP = {

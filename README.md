@@ -1,56 +1,44 @@
-# cnparser  
-[![Test](https://github.com/new-village/cnparser/actions/workflows/test.yaml/badge.svg)](https://github.com/new-village/cnparser/actions/workflows/test.yaml)
-![PyPI - Version](https://img.shields.io/pypi/v/cnparser)
+# jpcorpreg  
+[![Test](https://github.com/new-village/jpcorpreg/actions/workflows/test.yaml/badge.svg)](https://github.com/new-village/jpcorpreg/actions/workflows/test.yaml)
+![PyPI - Version](https://img.shields.io/pypi/v/jpcorpreg)
   
-**cnparser** is a python library for loading and enrichment [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/en/) data that is provided from National Tax Agency Japan. cnparser only support to parse latest data now.   
+**jpcorpreg** is a Python library that downloads corporate registry which is published in the [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/en/) as a data frame.
+   
   
 ## Installation  
 ----------------------
-cnparser is available on pip installation.
-```shell:
-$ python -m pip install cnparser
+jpcorpreg is available on pip installation.
+```sh
+$ python -m pip install jpcorpreg
 ```
   
 ### GitHub Install
 Installing the latest version from GitHub:  
-```shell:
-$ git clone https://github.com/new-village/cnparser
-$ cd cnparser
-$ python setup.py install
+```sh
+$ git clone https://github.com/new-village/jpcorpreg
+$ cd jpcorpreg
+$ pip install -e .
 ```
     
 ## Usage
 This section demonstrates how to use this library to load and process data from the National Tax Agency's [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/).
 
 ### Direct Data Loading
-To download data for a specific prefecture, use the `load` function. By passing the prefecture name as an argument, you can obtain a DataFrame containing data for that prefecture.If you wish to download data for a specific prefecture, you must specify the prefecture name in Roman characters ([list of the supported prefectures](https://github.com/new-village/cnparser/blob/main/cnparser/config/file_id.json)).  
-To execute the `load` function without specifying any arguments, data for all prefectures across Japan will be downloaded. 
-```python:
->>> import cnparser
->>> df = cnparser.load("Shimane")
+To download data for a specific prefecture, use the `load` function. By passing the prefecture name as an argument, you can obtain a DataFrame containing data for that prefecture.  
+```python
+>>> import jpcorpreg
+>>> df = jpcorpreg.load("Shimane")
+```
+
+To execute the `load` function without argument, data for all prefectures across Japan will be downloaded. 
+```python
+>>> import jpcorpreg
+>>> df = jpcorpreg.load()
 ```
 
 ### CSV Data Loading
 If you already have a downloaded CSV file, use the `read_csv` function. By passing the file path as an argument, you can obtain a DataFrame with headers from the CSV data.
-```python:
->>> import cnparser
->>> df = cnparser.read_csv("path/to/data.csv")
+```python
+>>> import jpcorpreg
+>>> df = jpcorpreg.read_csv("path/to/data.csv")
 ```
-
-### Data Enrichment Functionality
-The `enrich` function standardises and transforms the values of specific fields in the loaded DataFrame. 
-```python:
->>> import cnparser
->>> df = cnparser.enrich(df)
-```
-
-The functions perform all processing, but it is possible to apply only specific processing by defining specific processing as an argument.
-```python:
->>> import cnparser
->>> df = cnparser.enrich(df, "enrich_kana" ...)
-```
-
-The processes supported by the `enrich` function are as follows:
-- `enrich_kana`: Function that adds a standardized furigana column `furigana` to the DataFrame. It handles data entry by converting `name` to kana, if `furigana` is NaN. Note that currently only kanji and katakana conversions are supported. Alphabet conversions are not supported.  
-- `enrich_kind`: Function that adds the `kind` label to the `legal_entity`.  
-- `enrich_post_code`: Function that adds the formatted postcode as XXX-XXX to `post_code`.  

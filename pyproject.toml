@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jpcorpreg"
+version = "1.7.0"
+description = "jpcorpreg is a Python library that downloads corporate registry which is published in the Corporate Number Publication Site as a data frame."
+readme = "README.md"
+authors = [{ name = "new-village" }]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.8"
+dependencies = [
+  "requests",
+  "bs4",
+  "pandas",
+]
+
+[project.urls]
+Homepage = "https://github.com/new-village/jpcorpreg"
+Repository = "https://github.com/new-village/jpcorpreg"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["jpcorpreg"]
+where = ["."]
+
+[tool.setuptools.package-data]
+jpcorpreg = ["config/*.json"]
