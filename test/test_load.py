@@ -3,17 +3,17 @@
 import unittest
 import json
 import pandas as pd
-from cnparser.load import load, read_csv
+import jpcorpreg
 
 class TestLoadFunctions(unittest.TestCase):
     def setUp(self):
         """Load expected columns from configuration file before each test."""
-        with open('cnparser/config/header.json', 'r') as file:
+        with open('jpcorpreg/config/header.json', 'r') as file:
             self.expected_columns = json.load(file)
 
     def test_load(self):
         """Test the load function with 'Shimane' prefecture."""
-        result = load(prefecture='Shimane')
+        result = jpcorpreg.load(prefecture='Shimane')
 
         # Validate results
         self.assertIsInstance(result, pd.DataFrame)
@@ -22,7 +22,7 @@ class TestLoadFunctions(unittest.TestCase):
 
     def test_read_csv(self):
         """Test the read_csv function with a specific CSV file."""
-        result = read_csv('./test/data/31_tottori_test_20240329.csv')
+        result = jpcorpreg.read_csv('./test/data/31_tottori_test_20240329.csv')
 
         # Validate results
         self.assertIsInstance(result, pd.DataFrame)
