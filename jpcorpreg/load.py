@@ -66,7 +66,7 @@ PREF_MAP = {
     "国外": "Other"
 }
 
-def load(prefecture:str="All", format:str="df"):
+def load(prefecture: str = "All", format: str = "df"):
     """Loads data for a specified prefecture.
 
     Args:
