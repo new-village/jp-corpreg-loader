@@ -1,12 +1,14 @@
 '''load.py
 '''
-import io
+import os
 import re
 import zipfile
+import tempfile
 
 import requests
 import pandas as pd
-from io import StringIO
+import pyarrow as pa
+import pyarrow.parquet as pq
 from bs4 import BeautifulSoup
 
 from jpcorpreg.utility import load_config
@@ -64,7 +66,7 @@ PREF_MAP = {
     "国外": "Other"
 }
 
-def load(prefecture="All") -> pd.DataFrame:
+def load(prefecture: str = "All", format: str = "df"):
     """Loads data for a specified prefecture.
 
     Args:
@@ -74,7 +76,13 @@ def load(prefecture="All") -> pd.DataFrame:
         DataFrame: A DataFrame containing the loaded data.
     """
     loader = ZipLoader()
-    return loader.zip_load(prefecture)
+
+    if format == "df":
+        return loader.to_df(prefecture)
+    elif format == "parquet":
+        return loader.to_parquet(prefecture)
+    else:
+        raise ValueError("Invalid format. Use 'df' or 'parquet'.")
 
 def read_csv(file_path: str) -> pd.DataFrame:
     """Reads a CSV file from a specified path.
@@ -103,7 +111,15 @@ class ZipLoader():
         self.payload = {key: self._load_token(soup, key), "event": "download"}
         self.pref_list = self._fetch_file_ids(soup)
 
-    def zip_load(self, prefecture) -> pd.DataFrame:
+    def to_parquet(self, prefecture: str) -> str:
+        csv_path = self._zip_load(prefecture)
+        return self._convert_csv_2_parquet(csv_path)
+
+    def to_df(self, prefecture: str) -> pd.DataFrame:
+        csv_path = self._zip_load(prefecture)
+        return self._convert_csv_2_df(csv_path)
+
+    def _zip_load(self, prefecture) -> str:
         """Loads and processes a zip file from the server using a file ID.
 
         Args:
@@ -117,9 +133,8 @@ class ZipLoader():
         except KeyError as exp:
             raise SystemExit(f"Unexpected Key Value: {prefecture}") from exp
 
-        contents = self._download_zip(file_id)
-        csv_string = self._uncompress_file(contents)
-        return self._convert_csv_2_df(csv_string)
+        zip_path = self._download_zip(file_id)
+        return self._uncompress_file(zip_path)
 
     def _load_token(self, soup, key) -> str:
         """Loads a security token from the server for requests.
@@ -136,7 +151,7 @@ class ZipLoader():
         """
         return soup.find("input", {"name": key, "type": "hidden"})["value"]
 
-    def _download_zip(self, file_id) -> bytes:
+    def _download_zip(self, file_id) -> str:
         """Downloads a zip file from the server using the specified file ID.
 
         Args:
@@ -148,18 +163,21 @@ class ZipLoader():
         Raises:
             SystemExit: If the request fails or the server responds with an error.
         """
+        self.payload["selDlFileNo"] = file_id
+
         try:
-            self.payload["selDlFileNo"] = file_id
-            res = requests.post(self.url, params=self.payload, timeout=(3.0, 120.0))
+            with requests.post(self.url, params=self.payload, stream=True, timeout=(3.0, 120.0)) as res:
+                res.raise_for_status()
+                tmp = tempfile.NamedTemporaryFile(prefix="jpnzip_", suffix=".zip", delete=False)
+                with tmp as f:
+                    for chunk in res.iter_content(chunk_size=8 * 1024 * 1024):
+                        if chunk:
+                            f.write(chunk)
+                return tmp.name
         except requests.exceptions.RequestException as exp:
-            print('Request is failure: Name, server or service not known')
-            raise SystemExit("RequestsExceptions") from exp
+            raise SystemExit("Request to download ZIP failed") from exp
 
-        if res.status_code not in [200]:
-            raise SystemExit('Request to ' + self.url + ' has been failed: ' + str(res.status_code))
-        return res.content
-
-    def _uncompress_file(self, content) -> StringIO:
+    def _uncompress_file(self, zip_path: str) -> str:
         """Uncompresses the zip file content and extracts the CSV file.
 
         Args:
@@ -172,27 +190,69 @@ class ZipLoader():
             zipfile.BadZipFile: If the content is not a valid zip file.
         """
         try:
-            zip_object = zipfile.ZipFile(io.BytesIO(content))
+            with zipfile.ZipFile(zip_path) as zf:
+                # Enumerate candidate CSV files
+                members = [n for n in zf.namelist() if re.search(r"\.csv$", n, re.IGNORECASE)]
+                if not members:
+                    raise zipfile.BadZipFile("No CSV found in ZIP.")
+                target = members[0]
+
+                # Save CSV file to temporary file
+                tmp_csv = tempfile.NamedTemporaryFile(prefix="jpncsv_", suffix=".csv", delete=False)
+                with zf.open(target, "r") as src, open(tmp_csv.name, "wb") as dst:
+                    while True:
+                        chunk = src.read(8 * 1024 * 1024)
+                        if not chunk:
+                            break
+                        dst.write(chunk)
+                return tmp_csv.name
         except zipfile.BadZipFile:
-            print("Failed to unzip content. The content may not be a valid zip file.")
             raise
 
-        for file_name in zip_object.namelist():
-            if not re.search(r'.*\.asc', file_name):
-                txt = zip_object.open(file_name).read()
-                return StringIO(txt.decode('utf-8'))
-
-    def _convert_csv_2_df(self, csv_string) -> pd.DataFrame:
-        """Converts a CSV string to a DataFrame using predefined headers.
+    def _convert_csv_2_df(self, csv_path: str) -> pd.DataFrame:
+        """Converts a CSV file to a DataFrame using predefined headers.
 
         Args:
-            csv_string (str): The CSV file content as a string.
+            csv_path (str): The path to the CSV file.
 
         Returns:
-            DataFrame: A DataFrame created from the CSV string.
+            DataFrame: A DataFrame created from the CSV file.
         """
         header = load_config("header")
-        return pd.read_csv(csv_string, encoding='utf-8', header=None, names=header, dtype='object')
+        return pd.read_csv(csv_path, encoding='utf-8', header=None, names=header, dtype='object')
+    
+    def _convert_csv_2_parquet(self, csv_path: str) -> str:
+        """Converts a CSV file to a Parquet file.
+
+        Args:
+            csv_path (str): The path to the CSV file.
+
+        Returns:
+            str: The path to the created Parquet file.
+        """
+        header = load_config("header")
+        parquet_path = csv_path.replace(".csv", ".parquet")
+
+        # Create writer first and write chunk by chunk
+        writer = None
+        try:
+            for chunk in pd.read_csv(
+                csv_path,
+                encoding="utf-8",
+                header=None,
+                names=header,
+                dtype="object",
+                chunksize=200_000,   # Adjust according to memory
+            ):
+                table = pa.Table.from_pandas(chunk, preserve_index=False)
+                if writer is None:
+                    writer = pq.ParquetWriter(parquet_path, table.schema)
+                writer.write_table(table)
+        finally:
+            if writer:
+                writer.close()
+
+        return parquet_path
 
     def _fetch_file_ids(self, soup) -> dict:
         """

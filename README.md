@@ -36,6 +36,19 @@ To execute the `load` function without argument, data for all prefectures across
 >>> df = jpcorpreg.load()
 ```
 
+### Parquet Output
+If you prefer to save the downloaded data as a Parquet file instead of returning a DataFrame, pass `format="parquet"`. The function returns the path to the generated `.parquet` file.
+```python
+>>> import jpcorpreg
+>>> parquet_path = jpcorpreg.load("Shimane", format="parquet")
+```
+
+You can then read the Parquet file with pandas:
+```python
+>>> import pandas as pd
+>>> df = pd.read_parquet(parquet_path)
+```
+
 ### CSV Data Loading
 If you already have a downloaded CSV file, use the `read_csv` function. By passing the file path as an argument, you can obtain a DataFrame with headers from the CSV data.
 ```python
