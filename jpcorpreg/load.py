@@ -191,7 +191,7 @@ class ZipLoader():
         """
         try:
             with zipfile.ZipFile(zip_path) as zf:
-                # 候補列挙
+                # Enumerate candidate CSV files
                 members = [n for n in zf.namelist() if re.search(r"\.csv$", n, re.IGNORECASE)]
                 if not members:
                     raise zipfile.BadZipFile("No CSV found in ZIP.")
