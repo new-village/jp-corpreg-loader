@@ -24,7 +24,7 @@ def test_load_shimane_parquet(expected_columns):
         assert len(df) > 20000
     finally:
         # Best-effort cleanup of the parquet file
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(FileNotFoundError, OSError):
             os.remove(parquet_path)
 
 
