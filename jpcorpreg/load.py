@@ -233,7 +233,7 @@ class ZipLoader():
         header = load_config("header")
         parquet_path = csv_path.replace(".csv", ".parquet")
 
-        # Writerを最初に作成しておき、チャンクごとに書き込む
+        # Create writer first and write chunk by chunk
         writer = None
         try:
             for chunk in pd.read_csv(
