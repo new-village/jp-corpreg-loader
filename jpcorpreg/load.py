@@ -135,7 +135,6 @@ class ZipLoader():
 
         zip_path = self._download_zip(file_id)
         return self._uncompress_file(zip_path)
-        
 
     def _load_token(self, soup, key) -> str:
         """Loads a security token from the server for requests.
