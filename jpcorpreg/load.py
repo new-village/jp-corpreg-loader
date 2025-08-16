@@ -233,7 +233,11 @@ class ZipLoader():
         header = load_config("header")
         parquet_path = csv_path.replace(".csv", ".parquet")
 
-        # Create writer first and write chunk by chunk
+        # Enforce a stable Arrow schema across chunks to avoid type drift.
+        # Many columns can be entirely empty in a chunk; without a fixed schema
+        # pyarrow may infer pa.null() for that chunk, causing a mismatch.
+        arrow_schema = pa.schema([pa.field(col, pa.string()) for col in header])
+
         writer = None
         try:
             for chunk in pd.read_csv(
@@ -244,9 +248,10 @@ class ZipLoader():
                 dtype="object",
                 chunksize=200_000,   # Adjust according to memory
             ):
-                table = pa.Table.from_pandas(chunk, preserve_index=False)
+                # Create an Arrow table using the fixed schema; nulls remain nulls.
+                table = pa.Table.from_pandas(chunk, schema=arrow_schema, preserve_index=False)
                 if writer is None:
-                    writer = pq.ParquetWriter(parquet_path, table.schema)
+                    writer = pq.ParquetWriter(parquet_path, arrow_schema)
                 writer.write_table(table)
         finally:
             if writer:

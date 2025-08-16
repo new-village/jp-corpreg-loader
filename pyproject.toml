@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jpcorpreg"
-version = "1.8.0"
+version = "1.8.1"
 description = "jpcorpreg is a Python library that downloads corporate registry which is published in the Corporate Number Publication Site as a data frame."
 readme = "README.md"
 authors = [{ name = "new-village" }]
