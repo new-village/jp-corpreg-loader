@@ -1,35 +1,44 @@
-""" test_load.py
-"""
-import unittest
-import json
+"""pytest-based tests for jpcorpreg.load and helpers"""
+import os
+import contextlib
 import pandas as pd
+import pytest
 import jpcorpreg
 
-class TestLoadFunctions(unittest.TestCase):
-    def setUp(self):
-        """Load expected columns from configuration file before each test."""
-        with open('jpcorpreg/config/header.json', 'r') as file:
-            self.expected_columns = json.load(file)
 
-    def test_load(self):
-        """Test the load function with 'Shimane' prefecture."""
-        result = jpcorpreg.load(prefecture='Shimane')
+def test_load_shimane_df(shimane_df, expected_columns):
+    """Live test: fetch Shimane data as DataFrame and validate shape/columns."""
+    assert isinstance(shimane_df, pd.DataFrame)
+    assert list(shimane_df.columns) == expected_columns
+    assert len(shimane_df) > 20000
 
-        # Validate results
-        self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(list(result.columns), self.expected_columns)
-        self.assertGreater(len(result), 20000)
 
-    def test_read_csv(self):
-        """Test the read_csv function with a specific CSV file."""
-        result = jpcorpreg.read_csv('./test/data/31_tottori_test_20240329.csv')
+def test_load_shimane_parquet(expected_columns):
+    """Optional slow test: download Shimane and persist to parquet, then validate."""
+    parquet_path = jpcorpreg.load(prefecture="Shimane", format="parquet")
+    try:
+        assert isinstance(parquet_path, str) and parquet_path.endswith(".parquet")
+        assert os.path.exists(parquet_path)
+        df = pd.read_parquet(parquet_path)
+        assert list(df.columns) == expected_columns
+        assert len(df) > 20000
+    finally:
+        # Best-effort cleanup of the parquet file
+        with contextlib.suppress(Exception):
+            os.remove(parquet_path)
 
-        # Validate results
-        self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(list(result.columns), self.expected_columns)
-        self.assertEqual(len(result), 5)
-        self.assertEqual(result.iloc[0]['corporate_number'], '1000013050238')
-        self.assertEqual(result.iloc[1]['name'], '島田商事株式会社')
 
-if __name__ == '__main__':
-    unittest.main()
+def test_read_csv_sample(expected_columns):
+    """Read a small sample CSV and validate contents."""
+    result = jpcorpreg.read_csv("./test/data/31_tottori_test_20240329.csv")
+    assert isinstance(result, pd.DataFrame)
+    assert list(result.columns) == expected_columns
+    assert len(result) == 5
+    assert result.iloc[0]["corporate_number"] == "1000013050238"
+    assert result.iloc[1]["name"] == "島田商事株式会社"
+
+
+def test_invalid_prefecture_raises():
+    """Invalid prefecture should raise SystemExit from loader."""
+    with pytest.raises(SystemExit):
+        jpcorpreg.load(prefecture="Atlantis")
