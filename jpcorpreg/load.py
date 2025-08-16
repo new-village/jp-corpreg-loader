@@ -197,7 +197,7 @@ class ZipLoader():
                     raise zipfile.BadZipFile("No CSV found in ZIP.")
                 target = members[0]
 
-                # CSVファイルを一時ファイルに保存
+                # Save CSV file to temporary file
                 tmp_csv = tempfile.NamedTemporaryFile(prefix="jpncsv_", suffix=".csv", delete=False)
                 with zf.open(target, "r") as src, open(tmp_csv.name, "wb") as dst:
                     while True:
