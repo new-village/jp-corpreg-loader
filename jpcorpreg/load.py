@@ -242,7 +242,7 @@ class ZipLoader():
                 header=None,
                 names=header,
                 dtype="object",
-                chunksize=200_000,   # メモリに合わせて調整
+                chunksize=200_000,   # Adjust according to memory
             ):
                 table = pa.Table.from_pandas(chunk, preserve_index=False)
                 if writer is None:
