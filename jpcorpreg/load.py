@@ -81,6 +81,22 @@ def load(prefecture: str = "All", format: str = "df"):
         return loader.to_df(prefecture)
     elif format == "parquet":
         return loader.to_parquet(prefecture)
+def load_diff(date: str = None, format: str = "df"):
+    """Loads daily differential (sabun) data.
+
+    Args:
+        date (str, optional): Target date in 'YYYYMMDD' format. If None, the latest data is loaded.
+        format (str): The format to return data in ('df' or 'parquet'). Defaults to "df".
+
+    Returns:
+        DataFrame or str: A DataFrame containing the loaded data or path to parquet file.
+    """
+    loader = SabunLoader(target_date=date)
+
+    if format == "df":
+        return loader.to_df()
+    elif format == "parquet":
+        return loader.to_parquet()
     else:
         raise ValueError("Invalid format. Use 'df' or 'parquet'.")
 
@@ -279,3 +295,88 @@ class ZipLoader():
             file_id = re.search(r'\d{5}', row.find('a').get('onclick')).group()  # Extract file ID using regex
             region_file_ids[region_name] = file_id
         return region_file_ids
+
+class SabunLoader(ZipLoader):
+    """Handles the loading and processing of daily differential zip files from the server."""
+    def __init__(self, target_date: str = None):
+        self.url = "https://www.houjin-bangou.nta.go.jp/download/sabun/"
+
+        try:
+            response = requests.get(self.url + "index.html", timeout=(3.0, 60.0))
+            soup = BeautifulSoup(response.text, "html.parser")
+        except requests.exceptions.RequestException as exp:
+            raise SystemExit(f"Request to {self.url} has been failure") from exp
+        
+        key = "jp.go.nta.houjin_bangou.framework.web.common.CNSFWTokenProcessor.request.token"
+        self.payload = {key: self._load_token(soup, key), "event": "download"}
+        self.file_id = self._fetch_sabun_file_id(soup, target_date)
+
+    def to_parquet(self) -> str:
+        csv_path = self._zip_load()
+        return self._convert_csv_2_parquet(csv_path)
+
+    def to_df(self) -> pd.DataFrame:
+        csv_path = self._zip_load()
+        return self._convert_csv_2_df(csv_path)
+
+    def _zip_load(self) -> str:
+        zip_path = self._download_zip(self.file_id)
+        return self._uncompress_file(zip_path)
+
+    def _convert_japanese_date(self, raw_date: str) -> str:
+        """Converts a Japanese date string like '令和8年2月20日' to 'YYYYMMDD'."""
+        match_reiwa = re.search(r'令和(\d+|元)年(\d+)月(\d+)日', raw_date)
+        if match_reiwa:
+            year_val = 1 if match_reiwa.group(1) == '元' else int(match_reiwa.group(1))
+            y = year_val + 2018
+            m = int(match_reiwa.group(2))
+            d = int(match_reiwa.group(3))
+            return f"{y:04d}{m:02d}{d:02d}"
+            
+        match_heisei = re.search(r'平成(\d+|元)年(\d+)月(\d+)日', raw_date)
+        if match_heisei:
+            year_val = 1 if match_heisei.group(1) == '元' else int(match_heisei.group(1))
+            y = year_val + 1988
+            m = int(match_heisei.group(2))
+            d = int(match_heisei.group(3))
+            return f"{y:04d}{m:02d}{d:02d}"
+            
+        return None
+
+    def _fetch_sabun_file_id(self, soup, target_date: str) -> str:
+        """
+        Extracts the sabun file ID from the parsed HTML of a webpage for a specified date.
+        """
+        header = soup.find(id="csv-unicode")
+        if header:
+            table_div = header.find_next('div', class_='tbl03')
+            if table_div:
+                table = table_div.find('table')
+                if table:
+                    tbody = table.find('tbody')
+                    if tbody:
+                        for tr in tbody.find_all('tr'):
+                            th = tr.find('th')
+                            td = tr.find('td')
+                            if th and td:
+                                raw_date = th.text.strip()
+                                parsed_date = self._convert_japanese_date(raw_date)
+                                
+                                a_tag = td.find('a')
+                                if a_tag and a_tag.has_attr('onclick'):
+                                    match_id = re.search(r'\d{5}', a_tag['onclick'])
+                                    if match_id:
+                                        file_id = match_id.group()
+                                        
+                                        if target_date is None:
+                                            # Return the first available (latest) diff
+                                            return file_id
+                                            
+                                        if parsed_date == target_date:
+                                            # Found the requested date
+                                            return file_id
+
+        if target_date is None:
+            raise ValueError("Failed to retrieve the latest sabun file ID.")
+        else:
+            raise ValueError(f"No sabun data found for the date: {target_date}")

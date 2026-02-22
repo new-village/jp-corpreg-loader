@@ -36,6 +36,13 @@ To execute the `load` function without argument, data for all prefectures across
 >>> df = jpcorpreg.load()
 ```
 
+### Differential Data Loading
+If you want to download only the daily differential updates (sabun), use the `load_diff` function. By passing a `date` in `YYYYMMDD` format, you can download the diff for that specific date. If no date is provided, the latest diff is returned.
+```python
+>>> import jpcorpreg
+>>> df = jpcorpreg.load_diff("20260220")
+```
+
 ### Parquet Output
 If you prefer to save the downloaded data as a Parquet file instead of returning a DataFrame, pass `format="parquet"`. The function returns the path to the generated `.parquet` file.
 ```python
