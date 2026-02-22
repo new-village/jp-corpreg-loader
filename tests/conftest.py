@@ -17,4 +17,4 @@ def client():
 @pytest.fixture(scope="session")
 def shimane_df(client):
     """Live download of Shimane data as DataFrame (session-scoped)."""
-    return client.download_prefecture(prefecture="Shimane", format="df")
+    return client.fetch(prefecture="Shimane", format="df")

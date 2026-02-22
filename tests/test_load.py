@@ -15,7 +15,7 @@ def test_download_shimane_df(shimane_df, expected_columns):
 
 def test_download_shimane_parquet(client, expected_columns):
     """Optional slow test: download Shimane and persist to parquet, then validate."""
-    parquet_out_dir = client.download_prefecture(prefecture="Shimane", format="parquet")
+    parquet_out_dir = client.fetch(prefecture="Shimane", format="parquet")
     try:
         assert isinstance(parquet_out_dir, str)
         assert os.path.exists(parquet_out_dir)
@@ -33,4 +33,4 @@ def test_download_shimane_parquet(client, expected_columns):
 def test_invalid_prefecture_raises(client):
     """Invalid prefecture should raise ValueError from loader."""
     with pytest.raises(ValueError, match="Unexpected Prefecture"):
-        client.download_prefecture(prefecture="Atlantis")
+        client.fetch(prefecture="Atlantis")
