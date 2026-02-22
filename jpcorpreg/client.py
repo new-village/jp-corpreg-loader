@@ -38,31 +38,19 @@ class CorporateRegistryClient:
         self.session = requests.Session()
         self.writer = CorporateDataWriter()
 
-    def download_all(
+    def fetch(
         self, 
+        prefecture: str = "All", 
         format: str = "df", 
         output_dir: Optional[str] = None, 
         partition_cols: Optional[List[str]] = None
     ) -> Union[pd.DataFrame, str]:
         """
-        Downloads corporate registry data for all prefectures.
-        """
-        return self._download_and_process(
-            prefecture="All", 
-            format_type=format, 
-            output_dir=output_dir, 
-            partition_cols=partition_cols
-        )
-
-    def download_prefecture(
-        self, 
-        prefecture: str, 
-        format: str = "df", 
-        output_dir: Optional[str] = None, 
-        partition_cols: Optional[List[str]] = None
-    ) -> Union[pd.DataFrame, str]:
-        """
-        Downloads corporate registry data for a specific prefecture.
+        Downloads full wash corporate registry data. 
+        Defaults to 'All' prefectures over the whole country.
+        For format="parquet", passing partition_cols=["prefecture_name"] is recommended 
+        rather than "update_date" due to the Monthly wash nature of the full dataset,
+        which could lead to thousands of fragmented small files.
         """
         return self._download_and_process(
             prefecture=prefecture, 
@@ -71,7 +59,7 @@ class CorporateRegistryClient:
             partition_cols=partition_cols
         )
 
-    def download_diff(
+    def fetch_diff(
         self, 
         date: Optional[str] = None, 
         format: str = "df", 

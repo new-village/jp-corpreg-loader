@@ -33,27 +33,32 @@ client = CorporateRegistryClient()
 ```
 
 ### Direct Data Loading
-To download data for a specific prefecture as a pandas DataFrame, use the `download_prefecture` method. By passing the prefecture name in as an argument, it will perform streaming fetch from the National Tax site:
+To download data for a specific prefecture as a pandas DataFrame, use the `fetch` method. By passing the prefecture name in as an argument, it will perform streaming fetch from the National Tax site:
 ```python
->>> df = client.download_prefecture("Shimane")
+>>> df = client.fetch("Shimane")
 ```
 
-To execute the download across all prefectures across Japan, simply use `download_all`:
+To execute the download across all prefectures across Japan, simply leave the parameter empty or pass `"All"`:
 ```python
->>> df = client.download_all()
+>>> df = client.fetch()
 ```
 
 ### Differential Data Loading
-If you want to download only the daily differential updates (sabun), use the `download_diff` function. By passing a `date` in `YYYYMMDD` format, you can download the diff for that specific date. If no date is provided, the latest available diff is returned.
+If you want to download only the daily differential updates (sabun), use the `fetch_diff` function. By passing a `date` in `YYYYMMDD` format, you can download the diff for that specific date. If no date is provided, the latest available diff is returned.
 ```python
->>> df = client.download_diff("20260220")
+>>> df = client.fetch_diff("20260220")
 ```
 
 ### Parquet Output and Partitioning
-If you prefer to save the downloaded data for data lakes explicitly, pass `format="parquet"`. You can also supply the `partition_cols` argument so that the dataset is written in partitioned directories on disk. For example, partitioning by `update_date`. The function returns the output base directory path.
+If you prefer to save the downloaded data for data lakes explicitly, pass `format="parquet"`. You can also supply the `partition_cols` argument so that the dataset is written in partitioned directories on disk. The function returns the output base directory path.
+
+**Partitioning Context Notes:**
+- For `fetch()` (full wash dataset), use something like `partition_cols=["prefecture_name"]`. Avoid using "update_date" on a full data wash to prevent query fragmentation.
+- For `fetch_diff()` (daily diff data), use `partition_cols=["update_date"]` to append daily updates seamlessly into your data lake structure.
+
 ```python
 >>> # Example: Output differential data partitioned by update_date
->>> out_dir = client.download_diff(format="parquet", partition_cols=["update_date"])
+>>> out_dir = client.fetch_diff(format="parquet", partition_cols=["update_date"])
 ```
 
 You can then read the dynamically generated Parquet Dataset efficiently with pandas or PyArrow:
