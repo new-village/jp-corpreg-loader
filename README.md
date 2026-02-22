@@ -23,42 +23,41 @@ $ pip install -e .
 ## Usage
 This section demonstrates how to use this library to load and process data from the National Tax Agency's [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/).
 
-### Direct Data Loading
-To download data for a specific prefecture, use the `load` function. By passing the prefecture name as an argument, you can obtain a DataFrame containing data for that prefecture.  
+Starting with version 2.0.0, jpcorpreg provides a robust object-oriented client (`CorporateRegistryClient`) optimized for reading large datasets and native Parquet partitioning.
+
+### Initializing the Client
+First, import and initialize the client:
 ```python
->>> import jpcorpreg
->>> df = jpcorpreg.load("Shimane")
+from jpcorpreg import CorporateRegistryClient
+client = CorporateRegistryClient()
 ```
 
-To execute the `load` function without argument, data for all prefectures across Japan will be downloaded. 
+### Direct Data Loading
+To download data for a specific prefecture as a pandas DataFrame, use the `download_prefecture` method. By passing the prefecture name in as an argument, it will perform streaming fetch from the National Tax site:
 ```python
->>> import jpcorpreg
->>> df = jpcorpreg.load()
+>>> df = client.download_prefecture("Shimane")
+```
+
+To execute the download across all prefectures across Japan, simply use `download_all`:
+```python
+>>> df = client.download_all()
 ```
 
 ### Differential Data Loading
-If you want to download only the daily differential updates (sabun), use the `load_diff` function. By passing a `date` in `YYYYMMDD` format, you can download the diff for that specific date. If no date is provided, the latest diff is returned.
+If you want to download only the daily differential updates (sabun), use the `download_diff` function. By passing a `date` in `YYYYMMDD` format, you can download the diff for that specific date. If no date is provided, the latest available diff is returned.
 ```python
->>> import jpcorpreg
->>> df = jpcorpreg.load_diff("20260220")
+>>> df = client.download_diff("20260220")
 ```
 
-### Parquet Output
-If you prefer to save the downloaded data as a Parquet file instead of returning a DataFrame, pass `format="parquet"`. The function returns the path to the generated `.parquet` file.
+### Parquet Output and Partitioning
+If you prefer to save the downloaded data for data lakes explicitly, pass `format="parquet"`. You can also supply the `partition_cols` argument so that the dataset is written in partitioned directories on disk. For example, partitioning by `update_date`. The function returns the output base directory path.
 ```python
->>> import jpcorpreg
->>> parquet_path = jpcorpreg.load("Shimane", format="parquet")
+>>> # Example: Output differential data partitioned by update_date
+>>> out_dir = client.download_diff(format="parquet", partition_cols=["update_date"])
 ```
 
-You can then read the Parquet file with pandas:
+You can then read the dynamically generated Parquet Dataset efficiently with pandas or PyArrow:
 ```python
 >>> import pandas as pd
->>> df = pd.read_parquet(parquet_path)
-```
-
-### CSV Data Loading
-If you already have a downloaded CSV file, use the `read_csv` function. By passing the file path as an argument, you can obtain a DataFrame with headers from the CSV data.
-```python
->>> import jpcorpreg
->>> df = jpcorpreg.read_csv("path/to/data.csv")
+>>> df = pd.read_parquet(out_dir)
 ```
