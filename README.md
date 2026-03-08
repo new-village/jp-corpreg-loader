@@ -24,6 +24,7 @@ $ pip install -e .
 This section demonstrates how to use this library to load and process data from the National Tax Agency's [Corporate Number Publication Site](https://www.houjin-bangou.nta.go.jp/).
 
 Starting with version 2.0.0, jpcorpreg provides a robust object-oriented client (`CorporateRegistryClient`) optimized for reading large datasets and native Parquet partitioning.
+Recent updates introduce chunked streaming capabilities that allow downloading and parsing of the entire national dataset (All prefectures) within tight memory bounds (e.g. Cloud Run deployments with less than 1GB RAM) without creating large temporary files.
 
 ### Initializing the Client
 First, import and initialize the client:
